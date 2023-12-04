@@ -1,3 +1,4 @@
+// Code Taken from Aberra et al, JNE 2018
 /*
 * Calculates extracellular potentials (Ve) for either uniform E-field stimulation or
 * intracortical microstimulation (ICMS)
