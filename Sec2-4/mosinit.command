@@ -1,3 +1,4 @@
+# Code Taken from Aberra et al, JNE 2018
 #!/bin/bash
 # Launches init.hoc with increased stack size to enable generation of model neurons with large, myelinated axons using recursive functions
 # AUTHOR: Aman Aberra
