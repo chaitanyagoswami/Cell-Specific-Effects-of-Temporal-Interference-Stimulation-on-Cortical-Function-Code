@@ -1,3 +1,4 @@
+// Code Originaly Taken from Aberra et al, JNE 2018 and modified by Chaitanya Goswami
 /* 
 * Procedures for launching desired cell model, scaling diameters/lengths, and adding myelinated axon
 * AUTHOR: Aman Aberra, Duke University
