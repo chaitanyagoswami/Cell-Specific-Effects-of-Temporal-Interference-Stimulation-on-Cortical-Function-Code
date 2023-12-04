@@ -1,3 +1,4 @@
+// Code Taken from Aberra et al, JNE 2018
 /*
 * $Id: setpointers.hoc,v 1.4 2008/12/02 22:19:41 ted Exp ted $
 * sets up the pointers after the sections have been created
