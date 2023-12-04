@@ -1,3 +1,4 @@
+// Code Taken from Aberra et al, JNE 2018 (Is not used in the simulation studies)
 /*
 * $Id: stim.hoc,v 1.5 2009/02/24 00:55:27 ted Exp ted $
 * Set up stimulation waveform
