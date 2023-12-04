@@ -1,3 +1,4 @@
+// Code Taken from Aberra et al, JNE 2018
 /* 
 * Procedures for generating myelinated axon from original, unmyelinated morphology
 * Preserves original geometry, replaces axon with new sections named Myelin, Node, and Unmyelin 
