@@ -200,8 +200,8 @@ for l in range(len(amp_level)):
     no_ti_region_ti_pv = no_ti_region_ti_pv[idx_no_ti] 
     points_samples_no_ti = points_samples[idx_no_ti]
     
-    #plot_response(coord=points_samples_ti, values1=ti_region_ti_pv, values2=ti_region_ti_pyr, y_displace=2, c1=0, c2=np.max(no_ti_region_ti_pv), title=None, savepath=os.path.join(SAVE_PATH_plots,'TI_region_Pyr_PV_TI_Response'), show=True)
-    #plot_response(coord=points_samples_no_ti, values1=no_ti_region_ti_pv, values2=no_ti_region_ti_pyr, y_displace=6, c1=0, c2=np.max(no_ti_region_ti_pv), title=None, savepath=os.path.join(SAVE_PATH_plots,'No_TI_region_Pyr_PV_TI_Response'), show=True)
+    plot_response(coord=points_samples_ti, values1=ti_region_ti_pv, values2=ti_region_ti_pyr, y_displace=2, c1=0, c2=np.max(no_ti_region_ti_pv), title=None, savepath=os.path.join(SAVE_PATH_plots,'TI_region_Pyr_PV_TI_Response'), show=True)
+    plot_response(coord=points_samples_no_ti, values1=no_ti_region_ti_pv, values2=no_ti_region_ti_pyr, y_displace=6, c1=0, c2=np.max(no_ti_region_ti_pv), title=None, savepath=os.path.join(SAVE_PATH_plots,'No_TI_region_Pyr_PV_TI_Response'), show=True)
 
     print("Raw Data Loaded for Amplitude Level %d! Time Taken %s s"%(l,str(round(time.time()-start_time,3))))
     ## Plotting Results    
