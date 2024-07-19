@@ -30,6 +30,8 @@ activ_inc_std = np.sqrt(np.var(activ_inc, axis=1))
 activ_inc_25 = np.percentile(activ_inc,q=25, axis=1)
 activ_inc_75 = np.percentile(activ_inc,q=75, axis=1)
 
+#### Plotting Fig 5 d
+
 fig, ax = plt.subplots()
 labels = ['0.5\nmm', '1\nmm', '2\nmm', '4\nmm', '8\nmm', '16\nmm', 'Unif']
 data = np.median(activ_inc, axis=1) 
@@ -41,15 +43,7 @@ plt.tight_layout()
 plt.savefig(os.path.join(LOAD_PATH,'Median_Percentage_Increase.png'))
 plt.show()
 
-fig, ax = plt.subplots()
-data = np.mean(activ_inc, axis=1)
-bar_container = ax.bar(labels, data)
-ax.set_ylabel('% increase threshold', fontsize=19)
-ax.tick_params(axis='x', labelsize=18)
-ax.tick_params(axis='y', labelsize=18)
-plt.tight_layout()
-plt.savefig(os.path.join(LOAD_PATH,'Mean_Percentage_Increase.png'))
-plt.show()
+#### Plotting Fig 5 c
 
 fig, ax = plt.subplots()
 labels = ['0.5\nmm', '1\nmm', '2\nmm', '4\nmm', '8\nmm', '16\nmm', 'Unif']
@@ -71,19 +65,23 @@ plt.tight_layout()
 plt.savefig(os.path.join(LOAD_PATH,"Paired_Median_Percentage_Increase.png"))
 plt.show()
 
-
+#### Plotting Fig 5 b
 
 fig, ax = plt.subplots()
-labels = ['Sin','TI']*7
+labels = ['0.5\nmm', '1\nmm', '2\nmm', '4\nmm', '8\nmm', '16\nmm', 'Unif']
 data = []
+print(fr_activ_thresh_pyr.shape)
 for i in range(7):
     data.append(fr_activ_thresh_pyr[i,:,2]-fr_activ_thresh_pyr[i,:,0])
     data.append(fr_activ_thresh_pyr[i,:,3]-fr_activ_thresh_pyr[i,:,1])
 x_pos = np.array([0,1,3,4,6,7,9,10,12,13,15,16,18,19])
+x_pos_label = np.array([0.5,3.5,6.5,9.5,12.5,15.5,18.5])
 x = []
 for i in range(len(x_pos)):
     x.append(np.random.normal(x_pos[i], 0.04, data[i].shape[0]))
-bp = plt.boxplot(data, labels=labels,positions=x_pos)
+boxprops= dict(facecolor=(0,0,0,0), color='black', linewidth=2)
+medianprops = dict(color='black', linewidth=2)
+bp = plt.boxplot(data, patch_artist=True, positions=x_pos, boxprops=boxprops, medianprops=medianprops)
 for i in range(len(x_pos)):
     if i%2==0:
         if i==0:
@@ -95,18 +93,16 @@ for i in range(len(x_pos)):
             plt.scatter(x[i], data[i].flatten(), c='C1', alpha=0.4, label='Modulated')
         else:
             plt.scatter(x[i], data[i].flatten(), c='C1', alpha=0.4)
-
-#plt.title('% increase between Activation \n Thresholds of Pyr and PV', fontsize=22)
-plt.ylabel("% increase threshold", fontsize=20)
+plt.ylabel("PV-Pyr\n Firing Rate (Hz)", fontsize=20)
 plt.legend(fontsize=18, ncols=2)
-plt.xticks(fontsize=16)
-plt.yticks(fontsize=18)
+plt.xticks(ticks=x_pos_label, labels=labels, fontsize=19)
+plt.yticks(fontsize=19)
 plt.tight_layout()
-plt.savefig(os.path.join(LOAD_PATH,"Paired_Median_Percentage_FR_Diff.png"))
+plt.savefig(os.path.join(LOAD_PATH,"PV-Pyr_FR_Diff.png"))
 plt.show()
 
 
-
+#### Plotting SI Fig 7 a
 
 fig, ax = plt.subplots()
 labels = ['0.5mm', '1mm', '2mm', '4mm', '8mm', '16mm', 'Unif']
@@ -119,19 +115,8 @@ clevel = np.linspace(0,1,data.shape[1])
 bp = plt.boxplot(data, labels=labels)
 xlims = ax.get_xlim()
 plt.hlines(0,xmin=xlims[0], xmax=xlims[1], linestyle='--', color='black')
-#
-#xtickslocs = ax.get_xticks()
-#ymin, _ = ax.get_ylim()
-#print('xticks pixel coordinates')
-#xloc_lst = ax.transData.transform([(xtick, ymin) for xtick in xtickslocs])
-#for (medline,xloc) in zip(bp['medians'],xloc_lst):
-#    linedata = medline.get_ydata()
-#    median = linedata[0]
-#    ax.text(xloc[0], median, str(round(median,2)))
-#
 for i in range(data.shape[1]):
     plt.scatter(x[i], data[:,i], c=np.array(cm.prism(clevel[i])).reshape(1,-1), alpha=0.4)
-#plt.title('Diff. between Pyr Firing rates of TI \n and Sin at Pyr Activation Threshold', fontsize=22)
 plt.ylabel("Pure - Mod. Sin Fr. Rate", fontsize=18)
 plt.legend(fontsize=18)
 plt.xticks(fontsize=18)
@@ -140,6 +125,7 @@ plt.tight_layout()
 plt.savefig(os.path.join(LOAD_PATH,"Pyr_fr_Diff.png"))
 plt.show()
 
+#### Plotting SI Fig 7 b
 
 fig, ax = plt.subplots()
 labels = ['0.5\nmm', '1\nmm', '2\nmm', '4\nmm', '8\nmm', '16\nmm', 'Unif']
@@ -152,15 +138,6 @@ clevel = np.linspace(0,1,data.shape[1])
 bp = plt.boxplot(data, labels=labels)
 xlims = ax.get_xlim()
 plt.hlines(0,xmin=xlims[0], xmax=xlims[1], linestyle='--', color='black')
-#xtickslocs = ax.get_xticks()
-#ymin, _ = ax.get_ylim()
-#print('xticks pixel coordinates')
-#xloc_lst = ax.transData.transform([(xtick, ymin) for xtick in xtickslocs])
-#for (medline,xloc) in zip(bp['medians'],xloc_lst):
-#    linedata = medline.get_ydata()
-#    median = linedata[0]
-#    ax.text(xloc[0], median, str(round(median,2)))
-#
 for i in range(data.shape[1]):
     plt.scatter(x[i], data[:,i], c=np.array(cm.prism(clevel[i])).reshape(1,-1), alpha=0.4)
 #plt.title('Diff. between PV Firing rates of TI \n and Sin at PV Activation Threshold', fontsize=22)
@@ -170,34 +147,4 @@ plt.xticks(fontsize=18)
 plt.yticks(fontsize=18)
 plt.tight_layout()
 plt.savefig(os.path.join(LOAD_PATH,"PV_fr_Diff.png"))
-plt.show()
-
-
-labels = ("0.5\nmm", "1\nmm", "2\nmm", "4\nmm", "8\nmm", "16\nmm", "Unif")
-data = np.vstack([np.median(fr_activ_thresh_pyr[:,:,2]-fr_activ_thresh_pyr[:,:,0], axis=1).reshape(1,-1),np.median(fr_activ_thresh_pyr[:,:,3]-fr_activ_thresh_pyr[:,:,1], axis=1).reshape(1,-1)])
-print(data.shape)
-fr_diff_medians = {'Sin':data[0],'TI': data[1]}
-
-x = np.arange(len(labels))  # the label locations
-width = 0.25  # the width of the bars
-multiplier = 0
-
-fig, ax = plt.subplots(layout='constrained')
-
-for attribute, measurement in fr_diff_medians.items():
-    offset = width * multiplier
-    rects = ax.bar(x + offset, measurement, width, label=attribute)
-    #ax.bar_label(rects, padding=3)
-    multiplier += 1
-
-# Add some text for labels, title and custom x-axis tick labels, etc.
-ax.set_ylabel('PV-Pyr Firing Rate (Hz)', fontsize=19)
-ax.legend(loc='upper right', ncols=3, fontsize=19)
-ax.set_xticks(x + width, labels)
-ax.tick_params(axis='x', labelsize=19)
-ax.tick_params(axis='y', labelsize=19)
-
-
-plt.tight_layout()
-plt.savefig(os.path.join(LOAD_PATH,"PV_fr_Diff_Bar.png"))
 plt.show()
