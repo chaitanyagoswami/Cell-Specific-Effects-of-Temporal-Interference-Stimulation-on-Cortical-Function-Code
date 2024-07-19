@@ -7,7 +7,7 @@ import time
 import ray
 import os
 from neuron_model_parallel import NeuronSim
-from elec_field import UniformField, sparse_place_rodent, ICMS, sparse_place_human
+from elec_field import UniformField
 from pulse_train import PulseTrain_Sinusoid, PulseTrain_TI
 import sys
 import math
