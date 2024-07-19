@@ -2,6 +2,9 @@ import matplotlib.pyplot as plt
 import numpy as np
 import os
 from matplotlib import cm
+import ray
+from neuron_model_parallel import NeuronSim
+from pointElec_sim import fibonacci_sphere
 
 LOAD_PATH = os.path.join(os.getcwd(),'TISimResults/PointElectrodeSim')
 SAVE_PATH = os.path.join(os.getcwd(),'TISimResults/Figs5Main')
@@ -144,3 +147,74 @@ plt.yticks(fontsize=18)
 plt.tight_layout()
 plt.savefig(os.path.join(LOAD_PATH,"SIFig7-b.png"))
 plt.show()
+
+##################################################################################
+################## ICMS Monopolar Experimental Setup #############################
+##################################################################################
+SEED = 1234 
+np.random.seed(SEED)
+print("Setting Random Seed as %s"%(str(round(SEED,3))))
+cwd = os.getcwd()
+print("Working in the directory: %s. All data will be saved and loaded relative to this directory"%(cwd))
+#### Defining Variables for Setting up Simulation
+
+cell_id_pyr_lst = [6,7,8,9,10] ## Different Morphology for L23 Pyr Cells
+cell_id_pv_lst = [32,33,34,35,36] ## Different Morphology for L23 LBC Cells
+human_or_mice = ray.put(1) ## 1->mice, 0-> human
+temp = ray.put(34.0) ## Celsius, temparature at which neurons are simulated
+dt = ray.put(0.025) ## ms, discretization time step
+num_cores = 30 ## Number of Cores used for Parallelization
+SHOW_PLOTS = False ## Flag used for showing or not showing plots
+dist = float(sys.argv[1]) ## mm, distance from the origin for the ICMS electrode
+elec_location_ICMS = fibonacci_sphere(samples=30) ## Sampling 20 approximately uniformly spaced electrode locations from a unit sphere
+elec_location_ICMS = elec_location_ICMS*dist ## Scaling the radius of sphere to the dist variable
+
+angle_pv = np.array([0,0]) ## parameter used for specifying rotation of PV morphology
+angle_pyr = np.array([0,0]) ## parameter used for specifying rotation of Pyr morphology
+
+loc_pyr = np.array([0,0,0]) ## parameter used for specifying location of Pyr morphology
+loc_pv = np.array([0,0,0]) ## parameter used for specifying location of PV morphology
+
+#### PLot Fig 5-a
+def plot_electrode_and_neuron(coord_elec, coord, savepath=None):
+    fig = plt.figure()
+    ax = fig.add_subplot(111,projection='3d')
+    img = ax.scatter(coord[:,0],coord[:,1],coord[:,2], linewidth=1.0, s=2.0)
+    img = ax.scatter(coord_elec[:,0], coord_elec[:,1], coord_elec[:,2], linewidth=0.3, s=50)
+    ax.set_xlabel('X-axis (um)', fontsize=14)
+    ax.set_ylabel('Y-axis (um)', fontsize=14)
+    ax.set_zlabel('Z-axis (um)', fontsize=14)
+    ax.set_title('Neuron Orientation w.r.t Electrode', fontsize=21)
+    ax.tick_params(axis='x',labelsize=12)
+    ax.tick_params(axis='y', labelsize=12)
+    ax.tick_params(axis='z',labelsize=12)
+    ax.view_init(10,120)
+    plt.savefig(savepath+'_orientation1.png')
+    ax.view_init(10,240)
+    plt.savefig(savepath+'_orientation2.png')
+    ax.view_init(10,90)
+    plt.savefig(savepath+'_orientation3.png')
+    ax.view_init(10,0)
+    plt.savefig(savepath+'_orientation4.png')
+    view_angle = np.linspace(0,360,361)
+    def update(frame):
+        ax.view_init(10,view_angle[frame])
+    ani = animation.FuncAnimation(fig=fig, func=update, frames=361, interval=20)
+    ani.save(os.path.join(savepath+'.gif'), writer='pillow')
+    ani.save(os.path.join(savepath+'.mp4'), writer='ffmpeg')
+    plt.show()
+
+### Intialize Neuron Simulator
+human_or_mice = ray.put(1) ## 0-> human and 1-> mice
+cell_id _pyr = ray.put(10)
+temp = ray.put(34.0) ## Celsius, temparature at which neurons are simulated
+dt = ray.put(0.025) ## ms, discretization time step
+angle_pyr = np.array([0,0]) ## parameter used for specifying rotation of Pyr morphology
+loc_pyr = np.array([0,0,0]) ## parameter used for specifying location of Pyr morphology
+
+neuron = NeuronSim.remote(human_or_mice=human_or_mice, cell_id=cell_id_pyr, temp=temp, dt=dt)
+coord = ray.get(neuron._translate_rotate_neuron.remote(pos_neuron=loc_pyr, angle=angle_pyr))
+elec_location_ICMS = fibonacci_sphere(samples=30) ## Sampling 30 approximately uniformly spaced electrode locations from a unit mm sphere
+
+savepath_curr = os.path.join(SAVE_PATH,'Fig5-a.png')
+plot_electrode_and_neuron(coord_elec=elec_location_ICMS*10**3, coord=coord, savepath=savepath_curr)
