@@ -57,7 +57,6 @@ plt.axhline(xmin=0, xmax=1,y=0, color='black', linestyle='--')
 for i in range(data.shape[1]):
     plt.scatter(x[i], data[:,i], c='C0', alpha=0.4)
 plt.ylabel("% increase threshold", fontsize=20)
-plt.legend(fontsize=18)
 plt.xticks(fontsize=18)
 plt.yticks(fontsize=18)
 plt.tight_layout()
