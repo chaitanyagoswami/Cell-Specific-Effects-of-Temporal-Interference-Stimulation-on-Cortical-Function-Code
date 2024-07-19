@@ -22,12 +22,9 @@ activ_thresh_pyr, activ_thresh_pv = np.array(activ_thresh_pyr), np.array(activ_t
 fr_activ_thresh_pyr, fr_activ_thresh_pv = np.array(fr_activ_thresh_pyr), np.array(fr_activ_thresh_pv)
 
 #### Calculatin average statistics
-activ_thresh_pyr_median, activ_thresh_pv_median = np.median(activ_thresh_pyr, axis=1), np.median(activ_thresh_pv, axis=1)
-activ_thresh_pyr_mean, activ_thresh_pv_mean = np.mean(activ_thresh_pyr, axis=1), np.mean(activ_thresh_pv, axis=1)
 activ_inc = (activ_thresh_pyr-activ_thresh_pv)/np.median(activ_thresh_pv,axis=1).reshape(-1,1)*100
 percentage = np.sum(activ_inc[4:]<0)/(np.sum(activ_inc[4:]>=0)+np.sum(activ_inc[4:]<0))*100
 print("The percentage of PV neurons having lower activation thresholda than Pyr neurons for transcranial fields: %.2f"%percentage)
-
 
 #### Plotting Fig 5 d
 
