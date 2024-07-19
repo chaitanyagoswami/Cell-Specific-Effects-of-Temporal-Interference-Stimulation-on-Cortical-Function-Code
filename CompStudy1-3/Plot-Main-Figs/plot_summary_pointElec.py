@@ -3,7 +3,7 @@ import numpy as np
 import os
 from matplotlib import cm
 
-LOAD_PATH = os.path.join(os.getcwd(),'TISimResults/MonopolarSim')
+LOAD_PATH = os.path.join(os.getcwd(),'TISimResults/PointElectrodeSim')
 filenames = ['Results_distance500.0um', 'Results_distance1000.0um', 'Results_distance2000.0um', 'Results_distance4000.0um', 'Results_distance8000.0um', 'Results_distance16000.0um', 'Results_uniform']
 files_dir = [os.path.join(LOAD_PATH,file) for file in filenames if file[:6]=='Result']
 activ_thresh_pyr, activ_thresh_pv  = [], []
@@ -23,9 +23,7 @@ activ_thresh_pyr_median, activ_thresh_pv_median = np.median(activ_thresh_pyr, ax
 activ_thresh_pyr_mean, activ_thresh_pv_mean = np.mean(activ_thresh_pyr, axis=1), np.mean(activ_thresh_pv, axis=1)
 activ_inc = (activ_thresh_pyr-activ_thresh_pv)/np.median(activ_thresh_pv,axis=1).reshape(-1,1)*100
 percentage = np.sum(activ_inc[4:]<0)/(np.sum(activ_inc[4:]>=0)+np.sum(activ_inc[4:]<0))*100
-print(percentage)
-print((np.sum(activ_inc>=0)+np.sum(activ_inc<0)))
-exit()
+
 activ_inc_median = np.median(activ_inc, axis=1)
 activ_inc_mean = np.mean(activ_inc, axis=1)
 activ_inc_std = np.sqrt(np.var(activ_inc, axis=1))
