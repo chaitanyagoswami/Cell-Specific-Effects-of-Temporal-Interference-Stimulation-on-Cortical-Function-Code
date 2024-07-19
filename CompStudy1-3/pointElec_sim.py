@@ -11,7 +11,7 @@ from elec_field import ICMS
 from pulse_train import PulseTrain_Sinusoid, PulseTrain_TI
 import sys
 import math
-from helper import cart_to_sph, sph_to_cart, fibonacci_sphere
+from helper import cart_to_sph, sph_to_cart, fibonacci_sphere, plot_electrode_and_neuron
 
 ##################################################################################
 ################## ICMS Monopolar Experimental Setup #############################
@@ -50,35 +50,6 @@ if not os.path.exists(SAVE_PATH):
 
 PLOT_NEURON_AND_ELECTRODE = False
 if PLOT_NEURON_AND_ELECTRODE:
-    def plot_electrode_and_neuron(coord_elec, coord, savepath=None):
-        fig = plt.figure()
-        ax = fig.add_subplot(111,projection='3d')
-        img = ax.scatter(coord[:,0],coord[:,1],coord[:,2], linewidth=1.0, s=2.0)
-        img = ax.scatter(coord_elec[:,0], coord_elec[:,1], coord_elec[:,2], linewidth=0.3, s=50)
-        ax.set_xlabel('X-axis (um)', fontsize=14)
-        ax.set_ylabel('Y-axis (um)', fontsize=14)
-        ax.set_zlabel('Z-axis (um)', fontsize=14)
-        ax.set_title('Neuron Orientation w.r.t Electrode', fontsize=21)
-        #for i in range(coord_elec.shape[0]):
-        #    ax.text(coord_elec[i,0],coord_elec[i,1],coord_elec[i,2], 'MonoPolar Electrode')
-        ax.tick_params(axis='x',labelsize=12)
-        ax.tick_params(axis='y', labelsize=12)
-        ax.tick_params(axis='z',labelsize=12)
-        ax.view_init(10,120)
-        plt.savefig(savepath+'_orientation1.png')
-        ax.view_init(10,240)
-        plt.savefig(savepath+'_orientation2.png')
-        ax.view_init(10,90)
-        plt.savefig(savepath+'_orientation3.png')
-        ax.view_init(10,0)
-        plt.savefig(savepath+'_orientation4.png')
-        view_angle = np.linspace(0,360,361)
-        def update(frame):
-            ax.view_init(10,view_angle[frame])
-        ani = animation.FuncAnimation(fig=fig, func=update, frames=361, interval=20)
-        ani.save(os.path.join(savepath+'.gif'), writer='pillow')
-        ani.save(os.path.join(savepath+'.mp4'), writer='ffmpeg')
-        plt.show()
  
     ################### Plot Pyr Coordinates ##################################################################
 
