@@ -10,7 +10,7 @@ import os
 import time
 from scipy.signal import find_peaks
 from sklearn.linear_model import LinearRegression as lin_fit
-from elec_field import UniformField, sparse_place_rodent, ICMS, sparse_place_NHP
+from elec_field import UniformField, ICMS, sparse_place_NHP
 from pulse_train import PulseTrain_BiPhasic, PulseTrain_MonoPhasic
 import plotly
 import logging
