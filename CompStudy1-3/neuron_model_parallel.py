@@ -11,7 +11,6 @@ import time
 from scipy.signal import find_peaks
 from sklearn.linear_model import LinearRegression as lin_fit
 
-from pulse_train import PulseTrain_BiPhasic, PulseTrain_MonoPhasic
 import plotly
 import logging
 
