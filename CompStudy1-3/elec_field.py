@@ -1,5 +1,5 @@
 import numpy as np
-from SparsePlace import SparsePlaceRodent, SparsePlaceSpherical, SparsePlaceNHP
+from SparsePlace import SparsePlaceSpherical
 
 
 class UniformField:
