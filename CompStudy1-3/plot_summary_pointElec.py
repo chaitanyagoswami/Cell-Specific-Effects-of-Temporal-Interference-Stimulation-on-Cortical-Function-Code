@@ -6,7 +6,7 @@ import matplotlib.animation as animation
 from matplotlib import cm
 import ray
 from neuron_model_parallel import NeuronSim
-from helper import fibonacci_sphere
+from helper import fibonacci_sphere, plot_electrode_and_neuron
 
 LOAD_PATH = os.path.join(os.getcwd(),'TISimResults/PointElectrodeSim')
 SAVE_PATH = os.path.join(os.getcwd(),'TISimResults/Figs5Main')
