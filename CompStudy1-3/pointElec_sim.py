@@ -81,7 +81,7 @@ loc_pv = np.array([0,0,0]) ## parameter used for specifying location of PV morph
 ###################################################################################
 ###################################################################################
 
-SAVE_PATH = os.path.join(os.getcwd(),'TISimResults/MonopolarSim/Results_distance'+str(dist*10**3)+"um")
+SAVE_PATH = os.path.join(os.getcwd(),'TISimResults/PointElectrodeSim/Results_distance'+str(dist*10**3)+"um")
 if not os.path.exists(SAVE_PATH):
     os.makedirs(SAVE_PATH)
 
