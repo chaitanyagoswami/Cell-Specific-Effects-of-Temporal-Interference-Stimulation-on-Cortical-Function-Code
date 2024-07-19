@@ -105,7 +105,7 @@ plt.show()
 #### Plotting SI Fig 7 a
 
 fig, ax = plt.subplots()
-labels = ['0.5mm', '1mm', '2mm', '4mm', '8mm', '16mm', 'Unif']
+labels = ['0.5\nmm', '1\nmm', '2\nmm', '4\nmm', '8\nmm', '16\nmm', 'Unif']
 data = fr_activ_thresh_pyr[:,:,0]-fr_activ_thresh_pyr[:,:,1]
 data = data.T
 x = []
