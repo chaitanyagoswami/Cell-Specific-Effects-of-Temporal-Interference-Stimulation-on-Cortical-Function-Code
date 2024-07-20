@@ -32,9 +32,7 @@ class sparse_place_human:
         else:
             raise Exception('Define the Currents through the Electrodes')
         self.r = self.radius_head-r
-        #self._calc_curr_density()
         self._calc_voltage()
-        self._align_with_max()
         self.multiplier = multiplier
         print("Electric Field Simulator Instantiated")
 
