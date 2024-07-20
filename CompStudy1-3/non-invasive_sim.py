@@ -331,6 +331,7 @@ LOAD_DATA_FLAG = False
 if not LOAD_DATA_FLAG:
     min_level, max_level = float(sys.argv[2]), float(sys.argv[3])
     amp_level = np.linspace(min_level, max_level, 1)
+    np.save(os.path.join(SAVE_PATH,"Amplitude.npy"), amp_level)
     ## Uncomment below to use custom starting point to resume simulation from arbitrary amplitude level
     sim_already_performed = 0  # input('Enter the amplitude idx from which to start manually:')
 else:
