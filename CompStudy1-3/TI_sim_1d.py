@@ -126,7 +126,7 @@ if not os.path.exists(SAVE_PATH):
 start_time = time.time()
 print("Loading Electric Field Simulator...")
 overall_radius = 9.2 ## Radius of the sphere representing the whole head
-freq1, freq2 = int(sys.argv[2]), int(sys.argv[3]) ## Deciding the two frequencies for TI
+freq1, freq2 = int(sys.argv[1]), int(sys.argv[2]) ## Deciding the two frequencies for TI
 
 #### Defing the SAVING Directory for 2elec4cm-4cm Location
 SAVE_PATH = os.path.join(SAVE_PATH, '2elec4cm-4cm')
