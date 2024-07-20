@@ -214,6 +214,10 @@ if elec_field_id == 0:
     savepath = os.path.join(SAVE_PATH,"ExpSetup")
     if not os.path.exists(savepath):
         os.makedirs(savepath)
+    if elec_field_id == 0:
+        if not os.path.exists(os.path.join(cwd, 'TISimResults/Figs5Main')):
+            os.makedirs(os.path.join(cwd, 'TISimResults/Figs5Main'))
+        plot_points_to_sample(coord_elec=cart_patch, J=J, points=points_samples, savepath=os.path.join(cwd, 'TISimResults/Figs5Main/Fig5-e'))
     plot_points_to_sample(coord_elec=cart_patch, J=J, points=points_samples, savepath=os.path.join(savepath, "SampledPoints"))
 
 elif elec_field_id == 1:
@@ -326,7 +330,7 @@ print("Waveform Generated! Time Taken %s s"%(str(round(time.time()-start_time,3)
 LOAD_DATA_FLAG = False
 if not LOAD_DATA_FLAG:
     min_level, max_level = float(sys.argv[2]), float(sys.argv[3])
-    amp_level = np.linspace(min_level, max_level, 10)
+    amp_level = np.linspace(min_level, max_level, 1)
     ## Uncomment below to use custom starting point to resume simulation from arbitrary amplitude level
     sim_already_performed = 0  # input('Enter the amplitude idx from which to start manually:')
 else:
