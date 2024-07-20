@@ -12,67 +12,14 @@ from pulse_train import PulseTrain_Sinusoid, PulseTrain_TI
 import sys
 import math
 import matplotlib as mpl
+from helper import cart_to_sph, sph_to_cart, sample_1d
 mpl.rcParams['figure.dpi'] = 600
 
 ### Helper Functions
 ##################################################################################
 ##################################################################################
 ##################################################################################
-def cart_to_sph(pos):
-    if len(pos.shape) == 1:
-        pos = pos.reshape(1,-1)
-    r = np.sqrt(np.sum(pos**2, axis=1)).reshape(-1,1)
-    theta = np.arcsin(pos[:,2].reshape(-1,1)/r).reshape(-1,1)
-    phi = np.arctan2(pos[:,1],pos[:,0]).reshape(-1,1)
-    sph_pos = np.hstack([r,theta,phi])
-    return sph_pos
-    
-def sph_to_cart(pos):
-    if len(pos.shape) == 1:
-        pos = pos.reshape(1,-1)
-    x = pos[:,0]*np.cos(pos[:,1])*np.cos(pos[:,2])
-    y = pos[:,0]*np.cos(pos[:,1])*np.sin(pos[:,2])
-    z = pos[:,0]*np.sin(pos[:,1])
-    cart_pos = np.hstack([x.reshape(-1,1), y.reshape(-1,1), z.reshape(-1,1)])
-    return cart_pos
 
-def fibonacci_sphere(samples=1000):
-    points = []
-    phi = math.pi*(math.sqrt(5.)-1.)  # golden angle in radians
-    for i in range(samples):
-        y = 1-(i/float(samples-1))*2  # y goes from 1 to -1
-        radius = math.sqrt(1-y*y)  # radius at y
-        theta = phi*i  # golden angle increment
-        x = math.cos(theta) * radius
-        z = math.sin(theta) * radius
-        points.append((x, y, z))
-    return np.array(points)
-
-def sample_spherical(num_samples, theta_max, y_max, r=1, depth=0.07):
-    tot_samples = 0
-    samples = []
-    while tot_samples<num_samples:
-        samples_cand = np.random.uniform(low=-1, high=1, size=(10000,3))
-        samples_cand = samples_cand[np.sum(samples_cand**2,axis=1)<=1]
-        samples_cand = samples_cand*(r)
-        samples_cand = cart_to_sph(samples_cand)
-        samples_cand = samples_cand[samples_cand[:,1]>theta_max]
-        samples_cand = sph_to_cart(samples_cand)
-        samples_cand = samples_cand[np.abs(samples_cand[:,1])<y_max]
-        samples_cand = samples_cand[np.sqrt(np.sum(samples_cand**2,axis=1))>=(r-depth)]
-        samples.append(samples_cand)
-        tot_samples = tot_samples+samples_cand.shape[0]
-    samples = np.vstack(samples)
-    samples = samples[:num_samples]
-    return samples
-
-def sample_1d(num_samples, theta_max, r):
-    samples_theta = np.pi/2-np.abs(np.linspace(-theta_max, theta_max, num_samples))
-    samples_phi = np.hstack([0*np.ones(int(samples_theta.shape[0]/2)),np.pi*np.ones(int(samples_theta.shape[0]/2))]).reshape(-1,1)
-    #samples_theta = np.hstack([samples_theta, samples_theta[:-1]]).reshape(-1,1)
-    samples = np.hstack([r*np.ones([num_samples,1]),samples_theta.reshape(-1,1),samples_phi.reshape(-1,1)])
-    samples = sph_to_cart(samples)
-    return samples
 
 def plot_points_to_sample(coord_elec1, coord_elec2, J1, J2, freq1, freq2, points, savepath):
     
@@ -149,10 +96,10 @@ def plot_points_to_sample(coord_elec1, coord_elec2, J1, J2, freq1, freq2, points
     view_angle = np.linspace(0,360,361)
     def update(frame):
         ax.view_init(25,view_angle[frame])
-    #ani = animation.FuncAnimation(fig=fig, func=update, frames=361, interval=20)
-    #ani.save(os.path.join(savepath+'.gif'), writer='pillow')
-    #ani.save(os.path.join(savepath+'.mp4'), writer='ffmpeg')
-    #plt.show()
+    ani = animation.FuncAnimation(fig=fig, func=update, frames=361, interval=20)
+    ani.save(os.path.join(savepath+'.gif'), writer='pillow')
+    ani.save(os.path.join(savepath+'.mp4'), writer='ffmpeg')
+    plt.show()
     plt.close()
 
 ##################################################################################
@@ -421,6 +368,10 @@ for l in range(sim_already_performed,len(amp_level)):
     plt.xticks(fontsize=19)
     plt.yticks(fontsize=19)
     plt.tight_layout()
+    if int(amp_level[l])==1100:
+        if not os.path.exists(os.path.join(cwd, 'TISimResults/Figs5Main')):
+            os.makedirs(os.path.join(cwd, 'TISimResults/Figs5Main'))
+        plt.savefig(os.path.join(cwd, 'TISimResults/Figs5Main/Fig5-l.png'))
     plt.savefig(os.path.join(SAVE_PATH_plots,'1d-TI_PV_Pyr_FR.png'))
     if SHOW_PLOTS:
         plt.show()

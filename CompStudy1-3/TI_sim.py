@@ -11,60 +11,17 @@ from elec_field import sparse_place_human
 from pulse_train import PulseTrain_Sinusoid, PulseTrain_TI
 import sys
 import math
-import matplotlib as mpl
-mpl.rcParams['figure.dpi'] = 600
-TARGET_REGION = True
+from helper import cart_to_sph, sph_to_cart, sample_spherical
 
+TARGET_REGION = bool(int(sys.argv[5]))
+if TARGET_REGION:
+    print("Running Target Region Simulation")
+else:
+    print("Running Non-Target Region Simulation")
 ### Helper Functions
 ##################################################################################
 ##################################################################################
 ##################################################################################
-def cart_to_sph(pos):
-    if len(pos.shape) == 1:
-        pos = pos.reshape(1,-1)
-    r = np.sqrt(np.sum(pos**2, axis=1)).reshape(-1,1)
-    theta = np.arcsin(pos[:,2].reshape(-1,1)/r).reshape(-1,1)
-    phi = np.arctan2(pos[:,1],pos[:,0]).reshape(-1,1)
-    sph_pos = np.hstack([r,theta,phi])
-    return sph_pos
-    
-def sph_to_cart(pos):
-    if len(pos.shape) == 1:
-        pos = pos.reshape(1,-1)
-    x = pos[:,0]*np.cos(pos[:,1])*np.cos(pos[:,2])
-    y = pos[:,0]*np.cos(pos[:,1])*np.sin(pos[:,2])
-    z = pos[:,0]*np.sin(pos[:,1])
-    cart_pos = np.hstack([x.reshape(-1,1), y.reshape(-1,1), z.reshape(-1,1)])
-    return cart_pos
-
-def fibonacci_sphere(samples=1000):
-    points = []
-    phi = math.pi*(math.sqrt(5.)-1.)  # golden angle in radians
-    for i in range(samples):
-        y = 1-(i/float(samples-1))*2  # y goes from 1 to -1
-        radius = math.sqrt(1-y*y)  # radius at y
-        theta = phi*i  # golden angle increment
-        x = math.cos(theta) * radius
-        z = math.sin(theta) * radius
-        points.append((x, y, z))
-    return np.array(points)
-
-def sample_spherical(num_samples, theta_max, y_max, r=1):
-    tot_samples = 0
-    samples = []
-    while tot_samples<num_samples:
-        samples_cand = np.random.normal(loc=0, scale=1, size=(10000,3))
-        samples_cand = samples_cand/np.sqrt(np.sum(samples_cand**2, axis=1)).reshape(-1,1)*r
-        samples_cand = cart_to_sph(samples_cand)
-        samples_cand = samples_cand[samples_cand[:,1]>theta_max]
-        samples_cand = sph_to_cart(samples_cand)
-        samples_cand = samples_cand[np.abs(samples_cand[:,1])<y_max]
-        samples.append(samples_cand)
-        tot_samples = tot_samples+samples_cand.shape[0]
-    samples = np.vstack(samples)
-    samples = samples[:num_samples]
-    return samples
-
 
 def plot_points_to_sample(coord_elec1, coord_elec2, J1, J2, freq1, freq2, points, savepath):
     
@@ -143,74 +100,10 @@ def plot_points_to_sample(coord_elec1, coord_elec2, J1, J2, freq1, freq2, points
     view_angle = np.linspace(0,360,361)
     def update(frame):
         ax.view_init(25,view_angle[frame])
-    #ani = animation.FuncAnimation(fig=fig, func=update, frames=361, interval=20)
-    #ani.save(os.path.join(savepath+'.gif'), writer='pillow')
-    #ani.save(os.path.join(savepath+'.mp4'), writer='ffmpeg')
-    #plt.show()
+    ani = animation.FuncAnimation(fig=fig, func=update, frames=361, interval=20)
+    ani.save(os.path.join(savepath+'.gif'), writer='pillow')
+    ani.save(os.path.join(savepath+'.mp4'), writer='ffmpeg')
     plt.close()
-
-def plot_response(coord, values1, values2, y_displace, title=None, savepath=None, show=False):
-    
-    coord1, coord2 = coord.copy(), coord.copy()
-    coord1[:,1] = coord1[:,1]-y_displace/2
-    coord2[:,1] = coord2[:,1]+y_displace/2
-    values = np.concatenate([values1,values2], axis=0)
-    coord = np.concatenate([coord1.copy(),coord2.copy()], axis=0)
-
-    fig = plt.figure()
-    ax = fig.add_subplot(111,projection='3d')
-    color_map = cm.ScalarMappable(cmap='viridis_r')
-    alpha_scale = values.copy()
-    start_transparency = 0.5
-    alpha_scale = (alpha_scale-np.min(alpha_scale))/(np.max(alpha_scale)-np.min(alpha_scale))*(1-start_transparency)+start_transparency
-    rgba = color_map.to_rgba(x=values, alpha=alpha_scale, norm=True)
-     
-    img = ax.scatter(coord[:,0],coord[:,1],coord[:,2],c=rgba, linewidth=2.0)
-    cbar=plt.colorbar(mappable=color_map, ax=ax)
-    cbar.set_label('(Hz)', fontsize=22)
-    cbar.ax.tick_params(labelsize=18)
-
-    if title is not None:
-        ax.set_title(title, fontsize=21)
-    
-    ax.tick_params(axis='x',which='both', left=False, right=False, labelleft=False, labelright=False, bottom=False,top=False,labelbottom=False,labelsize=12)
-    ax.tick_params(axis='y',which='both', left=False, right=False, labelleft=False, labelright=False, bottom=False,top=False,labelbottom=False, labelsize=12)
-    ax.tick_params(axis='z',which='both', left=False, right=False, labelleft=False, labelright=False, bottom=False,top=False,labelbottom=False,labelsize=12)
-
-    id1 = np.argmax(coord1[:,0])
-    ax.text(coord1[id1,0]+3, coord1[id1,1]-2.3, coord1[id1,2], "PV\nNeuron", fontsize=13)
-    id2 = np.argmax(coord2[:,0])
-    ax.text(coord2[id2,0]+3, coord2[id2,1]-2.3, coord2[id2,2], "Pyr\nNeuron", fontsize=13)
-    xmin, xmax = ax.get_xlim()
-    ymin, ymax = ax.get_ylim()
-    ax.set_ylim(ymin=1.5*np.min([xmin,ymin]), ymax=1.5*np.max([xmax,ymax]))
-    ax.set_xlim(xmin=1.5*np.min([xmin,ymin]), xmax=1.5*np.max([xmax,ymax]))
-
-    plt.tight_layout()
-    if savepath is not None:
-        ax.view_init(45,120)
-        plt.savefig(savepath+'_orientation1.png')
-        ax.view_init(45,240)
-        plt.savefig(savepath+'_orientation2.png')
-        ax.view_init(45,90)
-        plt.savefig(savepath+'_orientation3.png')
-        ax.view_init(45,0)
-        plt.savefig(savepath+'_orientation4.png')
-        ax.view_init(90,0)
-        plt.savefig(savepath+'_orientation5.png')
-
-    view_angle = np.linspace(0,360,361)
-    def update(frame):
-        ax.view_init(45,view_angle[frame])
-    #ani = animation.FuncAnimation(fig=fig, func=update, frames=361, interval=20)
-    #ani.save(os.path.join(savepath+'.gif'), writer='pillow')
-    
-    if show:
-        plt.show()
-    else:
-        plt.close()
-
-
 
 ##################################################################################
 ##################################################################################
@@ -297,10 +190,10 @@ if TARGET_REGION:
 else:
     points_samples = sample_spherical(num_samples=250, theta_max=np.pi/2-7/overall_radius, y_max=2, r=overall_radius-depth*10**(-1))
 
-savepath = os.path.join(SAVE_PATH,"ExpSetup")
-if not os.path.exists(savepath):
-    os.makedirs(savepath)
-plot_points_to_sample(coord_elec1=cart_patch_2000, coord_elec2=cart_patch_2020, J1=J_2000, J2=J_2020, freq1=freq1, freq2=freq2, points=points_samples, savepath=os.path.join(savepath, "SampledPoints"))
+if not TARGET_REGION:
+    if not os.path.exists(os.path.join(cwd, 'TISimResults/Figs5Main')):
+        os.makedirs(os.path.join(cwd, 'TISimResults/Figs5Main'))
+    plot_points_to_sample(coord_elec1=cart_patch_2000, coord_elec2=cart_patch_2020, J1=J_2000, J2=J_2020, freq1=freq1, freq2=freq2, points=points_samples, savepath=os.path.join(cwd, 'TISimResults/Figs5Main/Fig5-i'))
 print("Electric Field Simulator Loaded! Time Taken %s s"%(str(round(time.time()-start_time,3))))
 
 ### Defining Variables for Setting up Simulation
@@ -332,22 +225,14 @@ save_state_show = ray.put(False)
 print("Waveform Generated! Time Taken %s s"%(str(round(time.time()-start_time,3))))
 LOAD_DATA_FLAG = False
 if not LOAD_DATA_FLAG:
-    min_level, max_level = float(sys.argv[4]), float(sys.argv[5])
-    amp_level = np.linspace(min_level, max_level, 8)
-    np.save(os.path.join(SAVE_PATH,"Amplitude.npy"), amp_level)
-    sim_already_performed = len(os.listdir(SAVE_PATH))-2
-    if sim_already_performed<-1:
-        sim_already_performed = input('Error Encountered while automatically detecting the number of simulations already run. Enter manually:')
-    elif sim_already_performed == -1:
-        sim_already_performed = 0
-    if sim_already_performed != 0:
-        print("Already ran %d Amplitude Levels. Starting from Amplitude Level %d"%(sim_already_performed-1, sim_already_performed))
-    sim_already_performed=0
+    min_level, max_level = float(sys.argv[2]), float(sys.argv[3])
+    amp_level = np.linspace(min_level, max_level, 1)
+    ## Uncomment below to use custom starting point to resume simulation from arbitrary amplitude level
+    sim_already_performed = 0  # input('Enter the amplitude idx from which to start manually:')
 else:
     amp_level = np.load(os.path.join(SAVE_PATH,'Amplitude.npy'))
     sim_already_performed = 0
 
-sim_already_performed = 0
 for l in range(sim_already_performed,len(amp_level)):
     
     round_start_time = time.time()    
@@ -387,7 +272,7 @@ for l in range(sim_already_performed,len(amp_level)):
         
         start_time = time.time()
         print("Simulation for Pyr Neuron Started...")
-        fr_rate_ti_pyr = [] 
+        fr_rate_pyr = []
         for num in range(split_num):
             neuron = [NeuronSim.remote(human_or_mice=human_or_mice, cell_id=cell_id_pyr[num][i], temp=temp, dt=dt, elec_field=elec_field_2000, elec_field2=elec_field_2020) for i in range(loc_pyr[num].shape[0])] ## Initializing neuron model
             ray.get([neuron[i]._set_xtra_param.remote(angle=angle_pyr[num][i], pos_neuron=loc_pyr[num][i]) for i in range(len(neuron))]) ## Setting Extracellular Stim Paramaters
@@ -396,13 +281,13 @@ for l in range(sim_already_performed,len(amp_level)):
             ## TI Stimulation
             results = [neuron[i].stimulate.remote(time_array=time_array, amp_array=amp_array_2000, amp_array2=amp_array_2020, scale1=amp_level[l], scale2=amp_level[l], sampling_rate=sampling_rate, delay_init=delay_init, delay_final=delay_final) for i in range(num_cores)]
             results = ray.get(results)
-            fr_rate_ti_pyr.append(np.array([results[i][1] for i in range(num_cores)]).flatten())
+            fr_rate_pyr.append(np.array([results[i][1] for i in range(num_cores)]).flatten())
             ## Uncomment to see plots of membrane potential
             #ray.get([neuron[i].plot_sim_result.remote(delay_init=delay_init) for i in range(num_cores)])
             del neuron
 
-        fr_rate_ti_pyr = np.hstack(fr_rate_ti_pyr)
-        fr_rate_ti_pyr = fr_rate_ti_pyr/(total_time*1e-03)
+        fr_rate_pyr = np.hstack(fr_rate_pyr)
+        fr_rate_pyr = fr_rate_pyr/(total_time*1e-03)
 
         print("Pyr Simulation Finished! Time Taken %s s"%(str(round(time.time()-start_time,3))))
 
@@ -414,7 +299,7 @@ for l in range(sim_already_performed,len(amp_level)):
         
         start_time = time.time()
         print("Simulation for PV Neuron Started...")
-        fr_rate_ti_pv = [] 
+        fr_rate_pv = []
         for num in range(split_num):
             neuron = [NeuronSim.remote(human_or_mice=human_or_mice, cell_id=cell_id_pv[num][i], temp=temp, dt=dt, elec_field=elec_field_2000, elec_field2=elec_field_2020) for i in range(loc_pyr[num].shape[0])] ## Initializing neuron model
             ray.get([neuron[i]._set_xtra_param.remote(angle=angle_pyr[num][i], pos_neuron=loc_pyr[num][i]) for i in range(len(neuron))]) ## Setting Extracellular Stim Paramaters
@@ -423,13 +308,13 @@ for l in range(sim_already_performed,len(amp_level)):
             ## TI Stimulation
             results = [neuron[i].stimulate.remote(time_array=time_array, amp_array=amp_array_2000, amp_array2=amp_array_2020, scale1=amp_level[l], scale2=amp_level[l], sampling_rate=sampling_rate, delay_init=delay_init, delay_final=delay_final) for i in range(num_cores)]
             results = ray.get(results)
-            fr_rate_ti_pv.append(np.array([results[i][1] for i in range(num_cores)]).flatten())
+            fr_rate_pv.append(np.array([results[i][1] for i in range(num_cores)]).flatten())
             ## Uncomment to see plots of membrane potential
             #ray.get([neuron[i].plot_sim_result.remote(delay_init=delay_init) for i in range(num_cores)])
             del neuron
 
-        fr_rate_ti_pv = np.hstack(fr_rate_ti_pv)
-        fr_rate_ti_pv = fr_rate_ti_pv/(total_time*1e-03)
+        fr_rate_pv = np.hstack(fr_rate_pv)
+        fr_rate_pv = fr_rate_pv/(total_time*1e-03)
 
         print("PV Simulation Finished! Time Taken %s s"%(str(round(time.time()-start_time,3))))
 
@@ -437,8 +322,8 @@ for l in range(sim_already_performed,len(amp_level)):
         #######################################################################################
         start_time = time.time()
         print("Saving Raw Data for Amplitude Level %d..."%(l))
-        np.save(os.path.join(SAVE_PATH_rawdata,'Pyr_ti_fr.npy'), fr_rate_ti_pyr)
-        np.save(os.path.join(SAVE_PATH_rawdata,'PV_ti_fr.npy'), fr_rate_ti_pv)
+        np.save(os.path.join(SAVE_PATH_rawdata,'Pyr_fr.npy'), fr_rate_pyr)
+        np.save(os.path.join(SAVE_PATH_rawdata,'PV_fr.npy'), fr_rate_pv)
         print("Raw Data Saved for Amplitude Level %d! Time Taken %s s"%(l,str(round(time.time()-start_time,3))))
     
     else:
@@ -447,49 +332,11 @@ for l in range(sim_already_performed,len(amp_level)):
         #######################################################################################
         start_time = time.time()
         print("Loading Raw Data for Amplitude Level %d..."%(l))
-        fr_rate_ti_pyr = np.load(os.path.join(SAVE_PATH_rawdata,'Pyr_ti_fr.npy'))
-        fr_rate_ti_pv = np.load(os.path.join(SAVE_PATH_rawdata,'PV_ti_fr.npy'))
+        fr_rate_pyr = np.load(os.path.join(SAVE_PATH_rawdata,'Pyr_fr.npy'))
+        fr_rate_pv = np.load(os.path.join(SAVE_PATH_rawdata,'PV_fr.npy'))
         print("Raw Data Loaded for Amplitude Level %d! Time Taken %s s"%(l,str(round(time.time()-start_time,3))))
 
-    ## Plotting Results    
-    #######################################################################################
-    if TARGET_REGION:
-        id_region = np.sqrt(np.sum(points_samples[:,:2]**2, axis=1))<=1
-    else:
-        id_region = np.sqrt(np.sum(points_samples[:,:2]**2, axis=1))>=1
-
-    fr_rate_ti_pyr = fr_rate_ti_pyr[id_region] 
-    fr_rate_ti_pv = fr_rate_ti_pv[id_region]
-    points_samples_non_TI = points_samples[id_region]
-    
-    id_fr_pyr = fr_rate_ti_pyr>5
 
     time_taken_round = time_taken_round*(l)/(l+1)+(time.time()-round_start_time)/(l+1)
     ETA = ((len(amp_level)-l-1)*time_taken_round)/3600
     print("Simulation Finished for Amplitude Level %d! Time Taken %s hr. ETA for script to finish: %s hr"%(l, str(round((time.time()-round_start_time)/3600,3)),str(round(ETA,3))))
-    
-    labels = ['PV-TI', 'Pyr-TI']
-    data = np.hstack([fr_rate_ti_pv[id_fr_pyr].reshape(-1,1), fr_rate_ti_pyr[id_fr_pyr].reshape(-1,1)])
-    x = []
-    for i in range(len(labels)):
-        x.append(np.random.normal(i+1, 0.04, data.shape[0]))
-    clevel = np.linspace(0,1,data.shape[1])
-    plt.boxplot(data, labels=labels)
-    for i in range(data.shape[1]):
-        plt.scatter(x[i], data[:,i], c=np.array(cm.prism(clevel[i])).reshape(1,-1), alpha=0.4)
-    plt.title("TI Firing Rate of PV and Pyr \n at injected current %s mA"%(str(round(amp_level[l],3))), fontsize=22)
-    plt.ylabel("Firing Rate (Hz)", fontsize=20)
-    plt.xticks(fontsize=20)
-    plt.yticks(fontsize=18)
-    plt.ylim(ymin=0)
-    plt.tight_layout()
-    plt.savefig(os.path.join(SAVE_PATH_plots,"Pyr_PV_ti.png"))
-    if SHOW_PLOTS:
-        plt.show()
-    else:
-        plt.close()
-    
-    if TARGET_REGION:
-        plot_response(coord=points_samples_non_TI, values1=fr_rate_ti_pv, values2=fr_rate_ti_pyr, y_displace=2, title=None, savepath=os.path.join(SAVE_PATH_plots,'Pyr_PV_TI_Response'), show=SHOW_PLOTS)
-    else:
-        plot_response(coord=points_samples_non_TI, values1=fr_rate_ti_pv, values2=fr_rate_ti_pyr, y_displace=6, title=None, savepath=os.path.join(SAVE_PATH_plots,'Pyr_PV_TI_Response'), show=SHOW_PLOTS)
