@@ -28,7 +28,7 @@ pulse_train_sin.plot_waveform(save_path=os.path.join(SAVE_PATH,'Sinusoid_Frequen
 ####################################################################################
 ######################### Plotting TI Waveforms ####################################
 ####################################################################################
-
+pulse_train_TI = PulseTrain_TI()
 amp1 = 0.5 ## a.u.
 amp2 = 0.5 ## a.u.
 freq1 = 2*1e3 ## Hz

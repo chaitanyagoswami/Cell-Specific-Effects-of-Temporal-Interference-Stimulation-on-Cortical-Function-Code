@@ -7,204 +7,87 @@ import time
 import ray
 import os
 from neuron_model_parallel import NeuronSim
-from elec_field import UniformField, sparse_place_rodent, ICMS, sparse_place_human
+from elec_field import sparse_place_human
 from pulse_train import PulseTrain_Sinusoid, PulseTrain_TI
 import sys
 import math
 import matplotlib as mpl
+from helper import cart_to_sph, sph_to_cart, sample_spherical
 mpl.rcParams['figure.dpi'] = 600
 
-### Helper Functions
-##################################################################################
-##################################################################################
-##################################################################################
-def cart_to_sph(pos):
-    if len(pos.shape) == 1:
-        pos = pos.reshape(1,-1)
-    r = np.sqrt(np.sum(pos**2, axis=1)).reshape(-1,1)
-    theta = np.arcsin(pos[:,2].reshape(-1,1)/r).reshape(-1,1)
-    phi = np.arctan2(pos[:,1],pos[:,0]).reshape(-1,1)
-    sph_pos = np.hstack([r,theta,phi])
-    return sph_pos
-    
-def sph_to_cart(pos):
-    if len(pos.shape) == 1:
-        pos = pos.reshape(1,-1)
-    x = pos[:,0]*np.cos(pos[:,1])*np.cos(pos[:,2])
-    y = pos[:,0]*np.cos(pos[:,1])*np.sin(pos[:,2])
-    z = pos[:,0]*np.sin(pos[:,1])
-    cart_pos = np.hstack([x.reshape(-1,1), y.reshape(-1,1), z.reshape(-1,1)])
-    return cart_pos
-
-def fibonacci_sphere(samples=1000):
-    points = []
-    phi = math.pi*(math.sqrt(5.)-1.)  # golden angle in radians
-    for i in range(samples):
-        y = 1-(i/float(samples-1))*2  # y goes from 1 to -1
-        radius = math.sqrt(1-y*y)  # radius at y
-        theta = phi*i  # golden angle increment
-        x = math.cos(theta) * radius
-        z = math.sin(theta) * radius
-        points.append((x, y, z))
-    return np.array(points)
-
-def sample_spherical(num_samples, theta_max, y_max, r=1):
-    tot_samples = 0
-    samples = []
-    while tot_samples<num_samples:
-        samples_cand = np.random.normal(loc=0, scale=1, size=(10000,3))
-        samples_cand = samples_cand/np.sqrt(np.sum(samples_cand**2, axis=1)).reshape(-1,1)*r
-        samples_cand = cart_to_sph(samples_cand)
-        samples_cand = samples_cand[samples_cand[:,1]>theta_max]
-        samples_cand = sph_to_cart(samples_cand)
-        samples_cand = samples_cand[np.abs(samples_cand[:,1])<y_max]
-        samples.append(samples_cand)
-        tot_samples = tot_samples+samples_cand.shape[0]
-    samples = np.vstack(samples)
-    samples = samples[:num_samples]
-    return samples
-
 def plot_points_to_sample(coord_elec, J, points, savepath):
-    
-    skull_samples = np.random.normal(loc=0, scale=1, size=(10**4,3))
-    skull_samples = skull_samples/np.sqrt(np.sum(skull_samples**2, axis=1)).reshape(-1,1)*(9.2-0.6)
+    skull_samples = np.random.normal(loc=0, scale=1, size=(10 ** 4, 3))
+    skull_samples = skull_samples / np.sqrt(np.sum(skull_samples ** 2, axis=1)).reshape(-1, 1) * (9.2 - 0.6)
     skull_samples = cart_to_sph(skull_samples)
-    skull_samples = skull_samples[skull_samples[:,1]>(np.pi/2-7/9.2)]
+    skull_samples = skull_samples[skull_samples[:, 1] > (np.pi / 2 - 7 / 9.2)]
     skull_samples = sph_to_cart(skull_samples)
-    scalp_samples = skull_samples.copy()/(9.2-0.6)*(9.2)
-    csf_samples = skull_samples.copy()/(9.2-0.6)*(9.2-1.1)
-    brain_samples = skull_samples.copy()/(9.2-0.6)*(9.2-1.2)
-    
-    skull_samples =  skull_samples[skull_samples[:,1]<=2]
-    skull_samples =  skull_samples[skull_samples[:,1]>=-2]
-    
-    scalp_samples =  scalp_samples[scalp_samples[:,1]<=2]
-    scalp_samples =  scalp_samples[scalp_samples[:,1]>=-2]
-    
-    csf_samples =  csf_samples[csf_samples[:,1]<=2]
-    csf_samples =  csf_samples[csf_samples[:,1]>=-2]
+    scalp_samples = skull_samples.copy() / (9.2 - 0.6) * (9.2)
+    csf_samples = skull_samples.copy() / (9.2 - 0.6) * (9.2 - 1.1)
+    brain_samples = skull_samples.copy() / (9.2 - 0.6) * (9.2 - 1.2)
 
+    skull_samples = skull_samples[skull_samples[:, 1] <= 2]
+    skull_samples = skull_samples[skull_samples[:, 1] >= -2]
+
+    scalp_samples = scalp_samples[scalp_samples[:, 1] <= 2]
+    scalp_samples = scalp_samples[scalp_samples[:, 1] >= -2]
+
+    csf_samples = csf_samples[csf_samples[:, 1] <= 2]
+    csf_samples = csf_samples[csf_samples[:, 1] >= -2]
 
     fig = plt.figure()
-    ax = fig.add_subplot(111,projection='3d')
-    img = ax.scatter(coord_elec[J>0,0], coord_elec[J>0,1], coord_elec[J>0,2], linewidth=0.3, s=100, color='red')
-    img = ax.scatter(coord_elec[J<0,0], coord_elec[J<0,1], coord_elec[J<0,2], linewidth=0.3, s=100, color='black')
-    img = ax.scatter(skull_samples[:,0], skull_samples[:,1], skull_samples[:,2], linewidth=0.3, s=10, color='grey', alpha=0.1)
-    img = ax.scatter(scalp_samples[:,0], scalp_samples[:,1], scalp_samples[:,2], linewidth=0.3, s=10, color='salmon', alpha=0.1)
-    img = ax.scatter(csf_samples[:,0], csf_samples[:,1], csf_samples[:,2], linewidth=0.3, s=10, color='deepskyblue', alpha=0.1)
-    img = ax.scatter(brain_samples[:,0], brain_samples[:,1], brain_samples[:,2], linewidth=0.3, s=10, color='crimson',alpha=0.1)
-    img = ax.scatter(points[:,0], points[:,1], points[:,2], linewidth=0.3, s=30, color='blue', alpha=0.7)
-
+    ax = fig.add_subplot(111, projection='3d')
+    img = ax.scatter(coord_elec[J > 0, 0], coord_elec[J > 0, 1], coord_elec[J > 0, 2], linewidth=0.3, s=100, color='red')
+    img = ax.scatter(coord_elec[J < 0, 0], coord_elec[J < 0, 1], coord_elec[J < 0, 2], linewidth=0.3, s=100, color='black')
+    img = ax.scatter(skull_samples[:, 0], skull_samples[:, 1], skull_samples[:, 2], linewidth=0.3, s=10, color='grey', alpha=0.1)
+    img = ax.scatter(scalp_samples[:, 0], scalp_samples[:, 1], scalp_samples[:, 2], linewidth=0.3, s=10, color='salmon', alpha=0.1)
+    img = ax.scatter(csf_samples[:, 0], csf_samples[:, 1], csf_samples[:, 2], linewidth=0.3, s=10, color='deepskyblue', alpha=0.1)
+    img = ax.scatter(brain_samples[:, 0], brain_samples[:, 1], brain_samples[:, 2], linewidth=0.3, s=10, color='crimson', alpha=0.1)
+    img = ax.scatter(points[:, 0], points[:, 1], points[:, 2], linewidth=0.3, s=30, color='blue', alpha=0.7)
 
     ax.set_xlabel('X-axis (cm)', fontsize=14)
     ax.set_ylabel('Y-axis (cm)', fontsize=14)
     ax.set_zlabel('Z-axis (cm)', fontsize=14)
     ax.set_title('Locations of Points Evaluated', fontsize=21)
-    ## For C3-C4 or C3-Cz config
+
     for i in range(coord_elec.shape[0]):
-        if J[i]>0:
-            ax.text(coord_elec[i,0]+1.2,coord_elec[i,1],coord_elec[i,2]+0.2, "+"+str(round(J[i],3)), fontsize=11)
+        if J[i] > 0:
+            ax.text(coord_elec[i, 0] + 1.2, coord_elec[i, 1], coord_elec[i, 2] + 0.2, "+" + str(round(J[i], 3)),fontsize=10)
         else:
-            ax.text(coord_elec[i,0],coord_elec[i,1],coord_elec[i,2]+0.2,str(round(J[i],3)), fontsize=11)
-            
-    ## Uncomment for HD-TDCS config and comment the above code block
-    #for i in range(coord_elec.shape[0]):
-    #    if J[i]>0:
-    #        ax.text(coord_elec[i,0]+1.2,coord_elec[i,1],coord_elec[i,2]+0.2, "+"+str(round(J[i],3)), fontsize=10)
-    #    else:
-    #        if coord_elec[i,0]<=0:
-    #            ax.text(coord_elec[i,0],coord_elec[i,1],coord_elec[i,2]+0.2,str(round(J[i],3)), fontsize=10)
-    #        else:
-    #            ax.text(coord_elec[i,0]+2.5,coord_elec[i,1],coord_elec[i,2]+0.2,str(round(J[i],3)), fontsize=10)
+            if coord_elec[i, 0] <= 0:
+                ax.text(coord_elec[i, 0], coord_elec[i, 1], coord_elec[i, 2] + 0.2, str(round(J[i], 3)), fontsize=10)
+            else:
+                ax.text(coord_elec[i, 0] + 2.5, coord_elec[i, 1], coord_elec[i, 2] + 0.2, str(round(J[i], 3)), fontsize=10)
 
-    ax.text(1.2,0,9.2-0.3, 'Scalp', fontsize=11)
-    ax.text(1.2,0,9.2-0.6-0.3, 'Skull', fontsize=11)
-    ax.text(-2.8,-4,7.0, 'CSF', fontsize=11)
-    ax.text(1.2,0,9.2-2.8, 'Brain', fontsize=11)
-    
-    ## Uncomment for HD-TDCS config and comment the above code block
-    #ax.text(4,0,9.2-0.1, 'Scalp', fontsize=11)
-    #ax.text(2.5,0,9.2-0.6, 'Skull', fontsize=11)
-    #ax.text(0.7,-3,7.6, 'CSF', fontsize=11)
-    #ax.text(-1.3,0,8, 'Brain', fontsize=11)
+    ## HD-TDCS
+    ax.text(4, 0, 9.2 - 0.1, 'Scalp', fontsize=11)
+    ax.text(2.5, 0, 9.2 - 0.6, 'Skull', fontsize=11)
+    ax.text(0.7, -3, 7.6, 'CSF', fontsize=11)
+    ax.text(-1.3, 0, 8, 'Brain', fontsize=11)
 
-    ax.tick_params(axis='x',labelsize=12)
+    ax.tick_params(axis='x', labelsize=12)
     ax.tick_params(axis='y', labelsize=12)
-    ax.tick_params(axis='z',labelsize=12)
-    ax.view_init(25,120)
-    plt.savefig(savepath+'_orientation1.png')
-    ax.view_init(25,240)
-    plt.savefig(savepath+'_orientation2.png')
-    ax.view_init(25,90)
-    plt.savefig(savepath+'_orientation3.png')
-    ax.view_init(25,0)
-    plt.savefig(savepath+'_orientation4.png')
-    view_angle = np.linspace(0,360,361)
+    ax.tick_params(axis='z', labelsize=12)
+    ax.view_init(25, 120)
+    plt.savefig(savepath + '_orientation1.png')
+    ax.view_init(25, 240)
+    plt.savefig(savepath + '_orientation2.png')
+    ax.view_init(25, 90)
+    plt.savefig(savepath + '_orientation3.png')
+    ax.view_init(25, 0)
+    plt.savefig(savepath + '_orientation4.png')
+    view_angle = np.linspace(0, 360, 361)
+
     def update(frame):
-        ax.view_init(25,view_angle[frame])
-    #ani = animation.FuncAnimation(fig=fig, func=update, frames=361, interval=20)
-    #ani.save(os.path.join(savepath+'.gif'), writer='pillow')
-    #ani.save(os.path.join(savepath+'.mp4'), writer='ffmpeg')
-    #plt.show()
-    plt.close()
+        ax.view_init(25, view_angle[frame])
 
-def plot_response(coord, values, coord_elec, J, title=None, savepath=None, show=False):
-    
-    fig = plt.figure()
-    ax = fig.add_subplot(111,projection='3d')
-    color_map = cm.ScalarMappable(cmap='viridis_r')
-    #color_map.set_array(values)
-    alpha_scale = values.copy()
-    start_transparency = 0.1
-    alpha_scale = (alpha_scale-np.min(alpha_scale))/(np.max(alpha_scale)-np.min(alpha_scale))*(1-start_transparency)+start_transparency
-    rgba = color_map.to_rgba(x=values, alpha=alpha_scale, norm=True)
-     
-    img = ax.scatter(coord[:,0],coord[:,1],coord[:,2],c=rgba, linewidth=2.0)
-    cbar=plt.colorbar(mappable=color_map, ax=ax)
-    
-    cbar.set_label('(Hz)', fontsize=16)
-    ax.set_xlabel('X-axis (cm)', fontsize=16)
-    ax.set_ylabel('Y-axis (cm)', fontsize=16)
-    ax.set_zlabel('Z-axis (cm)', fontsize=16)
-    if title is not None:
-        ax.set_title(title, fontsize=21)
-    ax.tick_params(axis='x',labelsize=12)
-    ax.tick_params(axis='y', labelsize=12)
-    ax.tick_params(axis='z',labelsize=12)
-    xmin, xmax = ax.get_xlim()
-    ax.set_ylim(ymin=xmin, ymax=xmax)
-    img = ax.scatter(coord_elec[J>0,0], coord_elec[J>0,1], coord_elec[J>0,2], linewidth=0.3, s=100, color='red')
-    img = ax.scatter(coord_elec[J<0,0], coord_elec[J<0,1], coord_elec[J<0,2], linewidth=0.3, s=100, color='black')
-    for i in range(coord_elec.shape[0]):
-        if J[i]>0:
-            ax.text(coord_elec[i,0],coord_elec[i,1],coord_elec[i,2], "+"+str(round(J[i],3)))
-        else:
-            ax.text(coord_elec[i,0],coord_elec[i,1],coord_elec[i,2],"-"+str(round(J[i],3)))
+    ani = animation.FuncAnimation(fig=fig, func=update, frames=361, interval=20)
+    ani.save(os.path.join(savepath+'.gif'), writer='pillow')
+    ani.save(os.path.join(savepath+'.mp4'), writer='ffmpeg')
+    plt.show()
 
-    plt.tight_layout()
-    if savepath is not None:
-        ax.view_init(45,120)
-        plt.savefig(savepath+'_orientation1.png')
-        ax.view_init(45,240)
-        plt.savefig(savepath+'_orientation2.png')
-        ax.view_init(45,90)
-        plt.savefig(savepath+'_orientation3.png')
-        ax.view_init(45,0)
-        plt.savefig(savepath+'_orientation4.png')
-        ax.view_init(90,0)
-        plt.savefig(savepath+'_orientation5.png')  
-    view_angle = np.linspace(0,360,361)
-    def update(frame):
-        ax.view_init(45,view_angle[frame])
-    #ani = animation.FuncAnimation(fig=fig, func=update, frames=361, interval=20)
-    #ani.save(os.path.join(savepath+'.gif'), writer='pillow')
-    if show:
-        plt.show()
-    else:
-        plt.close()
 
-def plot_response_compare(coord, values1, values2, coord_elec, y_displace, J, title=None, savepath=None, show=False):
-    
+def plot_response_compare(coord, values1, values2, coord_elec, y_displace, savepath=None, show=False, elec_field_id=0):
+
     coord1, coord2, coord_elec1, coord_elec2 = coord.copy(), coord.copy(), coord_elec.copy(), coord_elec.copy()
     coord1[:,1], coord_elec1[:,1] = coord1[:,1]-y_displace/2, coord_elec[:,1]-y_displace/2.0
     coord2[:,1], coord_elec2[:,1] = coord2[:,1]+y_displace/2, coord_elec[:,1]+y_displace/2.0
@@ -213,21 +96,22 @@ def plot_response_compare(coord, values1, values2, coord_elec, y_displace, J, ti
     fig = plt.figure()
     ax = fig.add_subplot(111,projection='3d')
     color_map = cm.ScalarMappable(cmap='viridis_r')
-    #color_map.set_array(values)
     alpha_scale = values.copy()
     start_transparency = 0.5
     alpha_scale = (alpha_scale-np.min(alpha_scale))/(np.max(alpha_scale)-np.min(alpha_scale))*(1-start_transparency)+start_transparency
     rgba = color_map.to_rgba(x=values, alpha=alpha_scale, norm=True)
-     
+
     img = ax.scatter(coord[:,0],coord[:,1],coord[:,2],c=rgba, linewidth=2.0)
-    
-    cbar=plt.colorbar(mappable=color_map, ax=ax,fraction=0.046, pad=0.04)
-    
-    cbar.set_label('(Hz)', fontsize=22)
+
+    cbar=plt.colorbar(mappable=color_map, ax=ax, pad=-0.1, shrink=0.64)
     cbar.ax.tick_params(labelsize=18)
 
-    ax.tick_params(axis='x',which='both', left=False, right=False, labelleft=False, labelright=False, bottom=False,top=False,labelbottom=False,labelsize=12)
-    ax.tick_params(axis='y',which='both', left=False, right=False, labelleft=False, labelright=False, bottom=False,top=False,labelbottom=False, labelsize=12)
+    ax.set_xlabel('X-axis (cm)', fontsize=20, labelpad=25)
+    ax.set_ylabel('Y-axis (cm)', fontsize=20, labelpad=25)
+
+    ax.tick_params(axis='x',labelsize=18, rotation=30, pad=10)
+    ax.tick_params(axis='y',labelsize=18, rotation=60, pad=28)
+
     ax.tick_params(axis='z',which='both', left=False, right=False, labelleft=False, labelright=False, bottom=False,top=False,labelbottom=False,labelsize=12)
     xmin, xmax = ax.get_xlim()
     ymin, ymax = ax.get_ylim()
@@ -235,9 +119,20 @@ def plot_response_compare(coord, values1, values2, coord_elec, y_displace, J, ti
     ax.set_xlim(xmin=1.5*np.min([xmin,ymin]), xmax=1.5*np.max([xmax,ymax]))
 
     id1 = np.argmax(coord1[:,2])
-    ax.text(np.min(coord_elec1[:,0])-0.7, coord1[id1,1]-1.5, coord1[id1,2]+0.5, "Pure\nSinusoid", fontsize=13)
+    ax.text(np.min(coord_elec1[:,0])-2.2, coord1[id1,1]-4.1, coord1[id1,2]+0.5, "Pure\nSinusoid", fontsize=13)
     id2 = np.argmax(coord2[:,2])
-    ax.text(np.min(coord_elec2[:,0])-0.7, coord2[id2,1]-1.5, coord2[id2,2]+0.5, "Modulated\nSinusoid",fontsize=13)
+    ax.text(np.min(coord_elec2[:,0])-2.2, coord2[id2,1]-4.1, coord2[id2,2]+0.5, "Modulated\nSinusoid",fontsize=13)
+
+    if elec_field_id==0:
+        ## C3-C4
+        ax.text(coord1[id1,0]-9.5, coord1[id1,1]+13, coord1[id1,2]+0.5, "(Hz)", fontsize=18)
+    elif elec_field_id==1:
+        ## C3-Cz
+        ax.text(coord1[id1,0]-8.5, coord1[id1,1]+11.5, coord1[id1,2]+0.5, "(Hz)", fontsize=18)
+    elif elec_field_id==2:
+        ## HD-TDCS
+        ax.text(coord1[id1,0]-19, coord1[id1,1]+27.5, coord1[id1,2]+0.5, "(Hz)", fontsize=18)
+
     plt.tight_layout()
     if savepath is not None:
         ax.view_init(45,120)
@@ -249,12 +144,12 @@ def plot_response_compare(coord, values1, values2, coord_elec, y_displace, J, ti
         ax.view_init(45,0)
         plt.savefig(savepath+'_orientation4.png')
         ax.view_init(90,0)
-        plt.savefig(savepath+'_orientation5.png') 
+        plt.savefig(savepath+'_orientation5.png')
     view_angle = np.linspace(0,360,361)
     def update(frame):
         ax.view_init(45,view_angle[frame])
-    #ani = animation.FuncAnimation(fig=fig, func=update, frames=361, interval=20)
-    #ani.save(os.path.join(savepath+'.gif'), writer='pillow')
+    ani = animation.FuncAnimation(fig=fig, func=update, frames=361, interval=20)
+    ani.save(os.path.join(savepath+'.gif'), writer='pillow')
     if show:
         plt.show()
     else:
@@ -354,6 +249,10 @@ elif elec_field_id == 1:
     savepath = os.path.join(SAVE_PATH,"ExpSetup")
     if not os.path.exists(savepath):
         os.makedirs(savepath)
+    if elec_field_id == 0:
+        if not os.path.exists(os.path.join(cwd, 'TISimResults/Figs5Main')):
+            os.makedirs(os.path.join(cwd, 'TISimResults/Figs5Main'))
+        plot_points_to_sample(coord_elec=cart_patch, J=J, points=points_samples,savepath=os.path.join(cwd, 'TISimResults/Figs5Main/Fig5-e'))
     plot_points_to_sample(coord_elec=cart_patch, J=J, points=points_samples, savepath=os.path.join(savepath, "SampledPoints"))
 
 elif elec_field_id == 2:
@@ -427,17 +326,9 @@ print("Waveform Generated! Time Taken %s s"%(str(round(time.time()-start_time,3)
 LOAD_DATA_FLAG = False
 if not LOAD_DATA_FLAG:
     min_level, max_level = float(sys.argv[2]), float(sys.argv[3])
-    amp_level = np.linspace(min_level, max_level, 10)
-    np.save(os.path.join(SAVE_PATH,"Amplitude.npy"), amp_level)
-    sim_already_performed = len(os.listdir(SAVE_PATH))-2
-    
-    if sim_already_performed<-1:
-        sim_already_performed = input('Error Encountered while automatically detecting the number of simulations already run. Enter manually:')
-    elif sim_already_performed == -1:
-        sim_already_performed = 0
-    
-    if sim_already_performed != 0:
-        print("Already ran %d Amplitude Levels. Starting from Amplitude Level %d"%(sim_already_performed-1, sim_already_performed))
+    amp_level = np.linspace(min_level, max_level, 1)
+    ## Uncomment below to use custom starting point to resume simulation from arbitrary amplitude level
+    sim_already_performed = 0  # input('Enter the amplitude idx from which to start manually:')
 else:
     amp_level = np.load(os.path.join(SAVE_PATH,"Amplitude.npy"))
     sim_already_performed = 0
@@ -592,7 +483,7 @@ for l in range(sim_already_performed,len(amp_level)):
     else:
         plt.close()
     
-    labels = ['PV-TI', 'Pyr-TI']
+    labels = ['PV-Mod.', 'Pyr-Mod.']
     data = np.hstack([fr_rate_ti_pv[idx_activ].reshape(-1,1), fr_rate_ti_pyr[idx_activ].reshape(-1,1)])
     x = []
     for i in range(len(labels)):
@@ -612,7 +503,7 @@ for l in range(sim_already_performed,len(amp_level)):
     else:
         plt.close()
 
-    labels = ['PV-Sin', 'PV-TI']
+    labels = ['PV-Pure', 'PV-Mod.']
     data = np.hstack([fr_rate_sin_pv[idx_activ].reshape(-1,1), fr_rate_ti_pv[idx_activ].reshape(-1,1)])
     x = [] 
     for i in range(len(labels)):
@@ -632,7 +523,7 @@ for l in range(sim_already_performed,len(amp_level)):
     else:
         plt.close()
 
-    labels = ['Pyr-Sin', 'Pyr-TI']
+    labels = ['Pyr-Pure', 'Pyr-Mod.']
     data = np.hstack([fr_rate_sin_pyr[idx_activ].reshape(-1,1), fr_rate_ti_pyr[idx_activ].reshape(-1,1)])
     x = []
     for i in range(len(labels)):
@@ -652,7 +543,7 @@ for l in range(sim_already_performed,len(amp_level)):
     else:
         plt.close()
 
-    labels = ['Sin', 'TI']
+    labels = ['Pure', 'Modulated']
     data = np.hstack([(fr_rate_sin_pv[idx_activ]-fr_rate_sin_pyr[idx_activ]).reshape(-1,1), (fr_rate_ti_pv[idx_activ]-fr_rate_ti_pyr[idx_activ]).reshape(-1,1)])
     x = []
     for i in range(len(labels)):
@@ -661,7 +552,7 @@ for l in range(sim_already_performed,len(amp_level)):
     plt.boxplot(data, labels=labels)
     for i in range(data.shape[1]):
         plt.scatter(x[i], data[:,i], c=np.array(cm.prism(clevel[i])).reshape(1,-1), alpha=0.4)
-    plt.title("Diff. Firing Rate for Sin and TI \n at injected current %s mA"%(str(round(amp_level[l],3))), fontsize=22)
+    plt.title("Diff. Firing Rate for Pure and Mod. \n at injected current %s mA"%(str(round(amp_level[l],3))), fontsize=22)
     plt.ylabel("Firing Rate (Hz)", fontsize=20)
     plt.xticks(fontsize=20)
     plt.yticks(fontsize=18)
@@ -672,15 +563,17 @@ for l in range(sim_already_performed,len(amp_level)):
     else:
         plt.close()
     
-    plot_response(coord_elec=cart_patch, J=J,coord=points_samples, values=fr_rate_sin_pv-fr_rate_sin_pyr, title="Diff. btw. PV and Pyr \n Firing Rate: Sinusoid", savepath=os.path.join(SAVE_PATH_plots,'Diff_Response_sin'), show=SHOW_PLOTS)
-    plot_response(coord_elec=cart_patch, J=J,coord=points_samples, values=fr_rate_ti_pv-fr_rate_ti_pyr, title="Diff. btw. PV and Pyr \n Firing Rate: TI", savepath=os.path.join(SAVE_PATH_plots,'Diff_Response_ti'), show=SHOW_PLOTS)
     if elec_field_id !=2:
-        plot_response_compare(coord_elec=cart_patch, J=J,coord=points_samples, values1=fr_rate_sin_pv-fr_rate_sin_pyr, values2=fr_rate_ti_pv-fr_rate_ti_pyr, y_displace=6, title="Comparison of Diff. btw.\n PV and Pyr Firing Rates", savepath=os.path.join(SAVE_PATH_plots,'Diff_Response_ti_compare'), show=SHOW_PLOTS)
-        plot_response_compare(coord_elec=cart_patch, J=J,coord=points_samples, values1=fr_rate_sin_pyr, values2=fr_rate_ti_pyr, y_displace=6, title="Comparison of Diff. btw.\n PV and Pyr Firing Rates", savepath=os.path.join(SAVE_PATH_plots,'Pyr_Response_compare'), show=SHOW_PLOTS)
+        if elec_field_id==0 and int(amp_level[l])==500:
+            if not os.path.exists(os.path.join(cwd, 'TISimResults/Figs5Main')):
+                os.makedirs(os.path.join(cwd, 'TISimResults/Figs5Main'))
+            plot_response_compare(coord_elec=cart_patch,coord=points_samples, values1=fr_rate_sin_pv-fr_rate_sin_pyr, values2=fr_rate_ti_pv-fr_rate_ti_pyr, y_displace=6, savepath=os.path.join(os.path.join(cwd, 'TISimResults/Figs5Main'),'Fig5-f'), show=SHOW_PLOTS, elec_field_id=elec_field_id)
+            plot_response_compare(coord_elec=cart_patch,coord=points_samples, values1=fr_rate_sin_pyr, values2=fr_rate_ti_pyr, y_displace=6, savepath=os.path.join(os.path.join(cwd, 'TISimResults/Figs5Main'),'Fig5-g'), show=SHOW_PLOTS, elec_field_id=elec_field_id)
+        plot_response_compare(coord_elec=cart_patch,coord=points_samples, values1=fr_rate_sin_pv-fr_rate_sin_pyr, values2=fr_rate_ti_pv-fr_rate_ti_pyr, y_displace=6, savepath=os.path.join(SAVE_PATH_plots,'Diff_Response_ti_compare'), show=SHOW_PLOTS, elec_field_id=elec_field_id)
+        plot_response_compare(coord_elec=cart_patch,coord=points_samples, values1=fr_rate_sin_pyr, values2=fr_rate_ti_pyr, y_displace=6, savepath=os.path.join(SAVE_PATH_plots,'Pyr_Response_compare'), show=SHOW_PLOTS, elec_field_id=elec_field_id)
     else:
-        plot_response_compare(coord_elec=cart_patch, J=J,coord=points_samples, values1=fr_rate_sin_pv-fr_rate_sin_pyr, values2=fr_rate_ti_pv-fr_rate_ti_pyr, y_displace=12, title="Comparison of Diff. btw.\n PV and Pyr Firing Rates", savepath=os.path.join(SAVE_PATH_plots,'Diff_Response_ti_compare'), show=SHOW_PLOTS)
-        plot_response_compare(coord_elec=cart_patch, J=J,coord=points_samples, values1=fr_rate_sin_pyr, values2=fr_rate_ti_pyr, y_displace=12, title="Comparison of Pyr Firing Rate", savepath=os.path.join(SAVE_PATH_plots,'Pyr_Response_compare'), show=SHOW_PLOTS)
-
+        plot_response_compare(coord_elec=cart_patch, coord=points_samples, values1=fr_rate_sin_pv-fr_rate_sin_pyr, values2=fr_rate_ti_pv-fr_rate_ti_pyr, y_displace=14, savepath=os.path.join(SAVE_PATH_plots,'Diff_Response_ti_compare'), show=SHOW_PLOTS, elec_field_id=elec_field_id)
+        plot_response_compare(coord_elec=cart_patch, coord=points_samples, values1=fr_rate_sin_pyr, values2=fr_rate_ti_pyr, y_displace=14, savepath=os.path.join(SAVE_PATH_plots,'Pyr_Response_compare'), show=SHOW_PLOTS, elec_field_id=elec_field_id)
 
 
 
