@@ -4,9 +4,9 @@ For running the code:
 
 1. Unzip the cells.zip and mechansims.zip files.
 3. Run the following commmand in the terminal: sh init_setup_run_once.sh
-4. To reproduce the results of Sec 2.4.1 run the following command in the terminal: sh run_pointElec_sim.sh
-5. To reproduce the results of Sec 2.4.2 run the following command in the terminal: sh run_non-invasive_sim.sh
-6. To reproduce the results of Sec 2.4.3 run the following command in the terminal: sh run_TI_sim.sh
+4. To reproduce the results of Computational Study 1 run the following command in the terminal: sh run_pointElec_sim.sh
+5. To reproduce the results of Computational Study 2 run the following command in the terminal: sh run_non-invasive_sim.sh
+6. To reproduce the results of Computational Study 3 run the following command in the terminal: sh run_TI_sim.sh
 
 Common Issues: 
 1. pyshtools is known to cause issues in Windows.
