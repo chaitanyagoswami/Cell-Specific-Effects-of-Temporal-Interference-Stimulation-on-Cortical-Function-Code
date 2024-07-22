@@ -11,61 +11,10 @@ from elec_field import sparse_place_human
 from pulse_train import PulseTrain_Sinusoid, PulseTrain_TI
 import sys
 import math
+from helper import cart_to_sph, sph_to_cart, sample_spherical
 
-### Helper Functions
-##################################################################################
-##################################################################################
-##################################################################################
-def cart_to_sph(pos):
-    if len(pos.shape) == 1:
-        pos = pos.reshape(1,-1)
-    r = np.sqrt(np.sum(pos**2, axis=1)).reshape(-1,1)
-    theta = np.arcsin(pos[:,2].reshape(-1,1)/r).reshape(-1,1)
-    phi = np.arctan2(pos[:,1],pos[:,0]).reshape(-1,1)
-    sph_pos = np.hstack([r,theta,phi])
-    return sph_pos
-    
-def sph_to_cart(pos):
-    if len(pos.shape) == 1:
-        pos = pos.reshape(1,-1)
-    x = pos[:,0]*np.cos(pos[:,1])*np.cos(pos[:,2])
-    y = pos[:,0]*np.cos(pos[:,1])*np.sin(pos[:,2])
-    z = pos[:,0]*np.sin(pos[:,1])
-    cart_pos = np.hstack([x.reshape(-1,1), y.reshape(-1,1), z.reshape(-1,1)])
-    return cart_pos
+def plot_response(coord, values1, values2, y_displace, title=None, savepath=None, show=False, target=False):
 
-def fibonacci_sphere(samples=1000):
-    points = []
-    phi = math.pi*(math.sqrt(5.)-1.)  # golden angle in radians
-    for i in range(samples):
-        y = 1-(i/float(samples-1))*2  # y goes from 1 to -1
-        radius = math.sqrt(1-y*y)  # radius at y
-        theta = phi*i  # golden angle increment
-        x = math.cos(theta) * radius
-        z = math.sin(theta) * radius
-        points.append((x, y, z))
-    return np.array(points)
-
-def sample_spherical(num_samples, theta_max, y_max, r=1):
-    tot_samples = 0
-    samples = []
-    while tot_samples<num_samples:
-        samples_cand = np.random.normal(loc=0, scale=1, size=(10000,3))
-        samples_cand = samples_cand/np.sqrt(np.sum(samples_cand**2, axis=1)).reshape(-1,1)*r
-        samples_cand = cart_to_sph(samples_cand)
-        samples_cand = samples_cand[samples_cand[:,1]>theta_max]
-        samples_cand = sph_to_cart(samples_cand)
-        samples_cand = samples_cand[np.abs(samples_cand[:,1])<y_max]
-        samples.append(samples_cand)
-        tot_samples = tot_samples+samples_cand.shape[0]
-    samples = np.vstack(samples)
-    samples = samples[:num_samples]
-    return samples
-
-
-
-def plot_response(coord, values1, values2, y_displace,c1=None,c2=None, title=None, savepath=None, show=False):
-    
     coord1, coord2 = coord.copy(), coord.copy()
     coord1[:,1] = coord1[:,1]-y_displace/2
     coord2[:,1] = coord2[:,1]+y_displace/2
@@ -79,23 +28,29 @@ def plot_response(coord, values1, values2, y_displace,c1=None,c2=None, title=Non
     start_transparency = 0.5
     alpha_scale = (alpha_scale-np.min(alpha_scale))/(np.max(alpha_scale)-np.min(alpha_scale))*(1-start_transparency)+start_transparency
     rgba = color_map.to_rgba(x=values, alpha=alpha_scale, norm=True)
-     
+
     img = ax.scatter(coord[:,0],coord[:,1],coord[:,2],c=rgba, linewidth=2.0)
-    cbar=plt.colorbar(mappable=color_map, ax=ax)
-    cbar.set_label('(Hz)', fontsize=16)
-    ax.set_xlabel('X-axis (cm)', fontsize=16)
-    ax.set_ylabel('Y-axis (cm)', fontsize=16)
-    ax.set_zlabel('Z-axis (cm)', fontsize=16)
+    cbar=plt.colorbar(mappable=color_map, ax=ax, pad=-0.1, shrink=0.64)
+    cbar.ax.tick_params(labelsize=18)
+
+    ax.set_xlabel('X-axis (cm)', fontsize=20, labelpad=20)
+    ax.set_ylabel('Y-axis (cm)', fontsize=20, labelpad=20)
     if title is not None:
         ax.set_title(title, fontsize=21)
-    ax.tick_params(axis='x',labelsize=12)
-    ax.tick_params(axis='y', labelsize=12)
 
 
+    ax.tick_params(axis='x',labelsize=18, rotation=30, pad=10)
+    ax.tick_params(axis='y',labelsize=18, rotation=60, pad=20)
+    ax.tick_params(axis='z',which='both', left=False, right=False, labelleft=False, labelright=False, bottom=False,top=False,labelbottom=False,labelsize=12)
     id1 = np.argmax(coord1[:,0])
-    ax.text(coord1[id1,0]+1, coord1[id1,1]-0.3, coord1[id1,2], "PV\nNeuron")
+    ax.text(coord1[id1,0]+1, coord1[id1,1]-0.5, coord1[id1,2], "PV\nNeuron", fontsize=13)
     id2 = np.argmax(coord2[:,0])
-    ax.text(coord2[id2,0]+1, coord2[id2,1]-0.3, coord2[id2,2], "Pyr\nNeuron")
+    ax.text(coord2[id2,0]+1, coord2[id2,1]-0.5, coord2[id2,2], "Pyr\nNeuron", fontsize=13)
+    if target:
+        ax.text(coord1[id1,0]-2.5, coord1[id1,1]-0.5, coord1[id1,2], "Target Region", fontsize=17)
+    else:
+        ax.text(coord1[id1, 0] - 2.5, coord1[id1, 1] - 0.5, coord1[id1, 2], "Non-Target Region", fontsize=17)
+    ax.text(coord1[id1,0]-4, coord1[id1,1]+4.4, coord1[id1,2], "(Hz)", fontsize=18)
     xmin, xmax = ax.get_xlim()
     ymin, ymax = ax.get_ylim()
     ax.set_ylim(ymin=1.5*np.min([xmin,ymin]), ymax=1.5*np.max([xmax,ymax]))
@@ -119,12 +74,11 @@ def plot_response(coord, values1, values2, y_displace,c1=None,c2=None, title=Non
         ax.view_init(45,view_angle[frame])
     ani = animation.FuncAnimation(fig=fig, func=update, frames=361, interval=20)
     ani.save(os.path.join(savepath+'.gif'), writer='pillow')
-    
+
     if show:
         plt.show()
     else:
         plt.close()
-
 ##################################################################################
 ##################################################################################
 ##################################################################################   
@@ -190,18 +144,23 @@ for l in range(len(amp_level)):
     #######################################################################################
     start_time = time.time()
     print("Loading Raw Data for Amplitude Level %d..."%(l))
-    ti_region_ti_pyr = np.load(os.path.join(SAVE_PATH_rawdata_ti,'Pyr_ti_fr.npy'))
-    ti_region_ti_pv = np.load(os.path.join(SAVE_PATH_rawdata_ti,'PV_ti_fr.npy'))
-    no_ti_region_ti_pyr = np.load(os.path.join(SAVE_PATH_rawdata_no_ti,'Pyr_ti_fr.npy'))
-    no_ti_region_ti_pv = np.load(os.path.join(SAVE_PATH_rawdata_no_ti,'PV_ti_fr.npy'))
+    ti_region_ti_pyr = np.load(os.path.join(SAVE_PATH_rawdata_ti,'Pyr_fr.npy'))
+    ti_region_ti_pv = np.load(os.path.join(SAVE_PATH_rawdata_ti,'PV_fr.npy'))
+    no_ti_region_ti_pyr = np.load(os.path.join(SAVE_PATH_rawdata_no_ti,'Pyr_fr.npy'))
+    no_ti_region_ti_pv = np.load(os.path.join(SAVE_PATH_rawdata_no_ti,'PV_fr.npy'))
     
     idx_no_ti = np.sqrt(np.sum(points_samples[:,:2]**2, axis=1))>=1
     no_ti_region_ti_pyr = no_ti_region_ti_pyr[idx_no_ti] 
     no_ti_region_ti_pv = no_ti_region_ti_pv[idx_no_ti] 
     points_samples_no_ti = points_samples[idx_no_ti]
-    
-    plot_response(coord=points_samples_ti, values1=ti_region_ti_pv, values2=ti_region_ti_pyr, y_displace=2, c1=0, c2=np.max(no_ti_region_ti_pv), title=None, savepath=os.path.join(SAVE_PATH_plots,'TI_region_Pyr_PV_TI_Response'), show=True)
-    plot_response(coord=points_samples_no_ti, values1=no_ti_region_ti_pv, values2=no_ti_region_ti_pyr, y_displace=6, c1=0, c2=np.max(no_ti_region_ti_pv), title=None, savepath=os.path.join(SAVE_PATH_plots,'No_TI_region_Pyr_PV_TI_Response'), show=True)
+    if int(amp_level[l]) == 1100:
+        if not os.path.exists(os.path.join(cwd, 'TISimResults/Figs5Main')):
+            os.makedirs(os.path.join(cwd, 'TISimResults/Figs5Main'))
+        plot_response(coord=points_samples_ti, values1=ti_region_ti_pv, values2=ti_region_ti_pyr, y_displace=2, title=None, savepath=os.path.join(cwd, 'TISimResults/Figs5Main/Fig5-j'), show=True, target=True)
+        plot_response(coord=points_samples_no_ti, values1=no_ti_region_ti_pv, values2=no_ti_region_ti_pyr, y_displace=6, title=None, savepath=os.path.join(cwd, 'TISimResults/Figs5Main/Fig5-k'), show=True, target=False)
+
+    plot_response(coord=points_samples_ti, values1=ti_region_ti_pv, values2=ti_region_ti_pyr, y_displace=2, title=None, savepath=os.path.join(SAVE_PATH_plots,'TI_region_Pyr_PV_TI_Response'), show=True, target=True)
+    plot_response(coord=points_samples_no_ti, values1=no_ti_region_ti_pv, values2=no_ti_region_ti_pyr, y_displace=6, title=None, savepath=os.path.join(SAVE_PATH_plots,'No_TI_region_Pyr_PV_TI_Response'), show=True, target=False)
 
     print("Raw Data Loaded for Amplitude Level %d! Time Taken %s s"%(l,str(round(time.time()-start_time,3))))
     ## Plotting Results    
