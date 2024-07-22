@@ -226,7 +226,7 @@ print("Waveform Generated! Time Taken %s s"%(str(round(time.time()-start_time,3)
 LOAD_DATA_FLAG = False
 if not LOAD_DATA_FLAG:
     min_level, max_level = float(sys.argv[3]), float(sys.argv[4])
-    amp_level = np.linspace(min_level, max_level, 10)
+    amp_level = np.linspace(min_level, max_level, 4)
     np.save(os.path.join(SAVE_PATH,"Amplitude.npy"), amp_level)
     ## Uncomment below to use custom starting point to resume simulation from arbitrary amplitude level
     sim_already_performed = 0  # input('Enter the amplitude idx from which to start manually:')
