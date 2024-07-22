@@ -82,7 +82,7 @@ SAVE_PATH = os.path.join(os.getcwd(),'TISimResults/PointElectrodeSim/Results_uni
 if not os.path.exists(SAVE_PATH):
     os.makedirs(SAVE_PATH)
 
-PLOT_NEURON_AND_UNITVEC = False
+PLOT_NEURON_AND_UNITVEC = True
 if PLOT_NEURON_AND_UNITVEC:
     def plot_electrode_and_neuron(coord_elec, coord, savepath=None):
         fig = plt.figure()
@@ -164,7 +164,7 @@ save_state_show = ray.put(False)
 print("Waveform Generated! Time Taken %s s"%(str(round(time.time()-start_time,3))))
 activ_thresh_pyr, activ_thresh_pv = np.empty(len(unit_vec)), np.empty(len(unit_vec))
 fr_activ_pyr, fr_activ_pv = np.empty([len(unit_vec),4]), np.empty([len(unit_vec), 4])
-LOAD_DATA_FLAG = True
+LOAD_DATA_FLAG = False
 cell_id_rand_pyr, cell_id_rand_pv = [], [] 
 for l in range(len(unit_vec)):
     print(">>>>>>>>>>>>>>>>>>>>>>>>>>>><<<<<<<<<<<<<<<<<<<<<<")
