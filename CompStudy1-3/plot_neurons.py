@@ -41,8 +41,6 @@ ax.set_xlabel('X-axis (um)', fontsize=14)
 ax.set_ylabel('Y-axis (um)', fontsize=14)
 ax.set_zlabel('Z-axis (um)', fontsize=14)
 ax.set_title('Morphology of Pyr Neuron Models ', fontsize=21)
-#for i in range(coord_elec.shape[0]):
-#    ax.text(coord_elec[i,0],coord_elec[i,1],coord_elec[i,2], 'MonoPolar Electrode')
 ax.tick_params(axis='x',labelsize=12)
 ax.tick_params(axis='y', labelsize=12)
 ax.tick_params(axis='z',labelsize=12)
