@@ -11,7 +11,7 @@ units = 'mA'
 amp = 1 ## a.u.
 freq = 2*1e3 ## Hz
 sampling_rate = 1e06
-SAVE_PATH = os.path.join(os.getcwd(),'TISimResults/SimValidation/InputWaveforms')
+SAVE_PATH = os.path.join(os.getcwd(),'TISimResults/InputWaveforms')
 if not os.path.exists(SAVE_PATH):
     os.makedirs(SAVE_PATH)
 
@@ -34,7 +34,7 @@ amp2 = 0.5 ## a.u.
 freq1 = 2*1e3 ## Hz
 freq2 = 2.02*1e3 ## Hz
 sampling_rate = 1e06
-SAVE_PATH = os.path.join(os.getcwd(),'TISimResults/SimValidation/InputWaveforms')
+SAVE_PATH = os.path.join(os.getcwd(),'TISimResults/InputWaveforms')
 if not os.path.exists(SAVE_PATH):
     os.makedirs(SAVE_PATH)
 
