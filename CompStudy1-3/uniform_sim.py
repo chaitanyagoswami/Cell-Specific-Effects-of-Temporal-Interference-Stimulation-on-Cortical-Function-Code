@@ -1,3 +1,8 @@
+import sys
+assert('neuron' not in sys.modules)
+import os
+nrn_options = "-nogui -NSTACK 100000 -NFRAME 20000"
+os.environ["NEURON_MODULE_OPTIONS"] = nrn_options
 import numpy as np
 import matplotlib.pyplot as plt
 from mpl_toolkits.mplot3d import Axes3D
