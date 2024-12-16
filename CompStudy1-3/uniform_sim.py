@@ -10,11 +10,9 @@ from matplotlib import cm
 import matplotlib.animation as animation
 import time
 import ray
-import os
 from neuron_model_parallel import NeuronSim
 from elec_field import UniformField
 from pulse_train import PulseTrain_Sinusoid, PulseTrain_TI
-import sys
 import math
 
 ### Helper Functions
