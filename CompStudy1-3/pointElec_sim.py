@@ -1,3 +1,8 @@
+import sys
+assert('neuron' not in sys.modules)
+import os
+nrn_options = "-nogui -NSTACK 100000 -NFRAME 20000"
+os.environ["NEURON_MODULE_OPTIONS"] = nrn_options
 import numpy as np
 import matplotlib.pyplot as plt
 from mpl_toolkits.mplot3d import Axes3D
@@ -5,11 +10,9 @@ from matplotlib import cm
 import matplotlib.animation as animation
 import time
 import ray
-import os
 from neuron_model_parallel import NeuronSim
 from elec_field import ICMS
 from pulse_train import PulseTrain_Sinusoid, PulseTrain_TI
-import sys
 import math
 from helper import cart_to_sph, sph_to_cart, fibonacci_sphere, plot_electrode_and_neuron
 
